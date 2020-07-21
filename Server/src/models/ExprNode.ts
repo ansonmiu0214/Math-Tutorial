@@ -1,16 +1,11 @@
+import BinOp, { fromToken, toToken } from './BinOp';
+
 export abstract class ExprNode {
 
   abstract eval(): number;
 
-  static Val(value: number) {
-    return new ValNode(value);
-  }
-
-  static BinExpr(left: ExprNode, right: ExprNode, op: BinOp) {
-    return new BinExprNode(left, right, op);
-  }
-
   abstract serialise(): any;
+
   static deserialise(object: any): ExprNode {
     switch (object.type) {
       case "value":
@@ -22,6 +17,14 @@ export abstract class ExprNode {
     }
   }
 
+  static Val(value: number) {
+    return new ValNode(value);
+  }
+
+  static BinExpr(left: ExprNode, right: ExprNode, op: BinOp) {
+    return new BinExprNode(left, right, op);
+  }
+
   static deserialiseNode(object: any): ExprNode {
     throw new Error("TODO: implement");
   }
@@ -30,7 +33,7 @@ export abstract class ExprNode {
 
 class ValNode extends ExprNode {
   
-  private readonly value: number;
+  readonly value: number;
 
   constructor(value: number) {
     super();
@@ -61,9 +64,9 @@ class ValNode extends ExprNode {
 
 class BinExprNode extends ExprNode {
 
-  readonly left: ExprNode
-  readonly right: ExprNode
-  readonly _op: BinOp
+  readonly left: ExprNode;
+  readonly right: ExprNode;
+  private readonly _op: BinOp;
 
   constructor(left: ExprNode, right: ExprNode, _op: BinOp) {
     super();
@@ -76,8 +79,8 @@ class BinExprNode extends ExprNode {
     return this._op;
   }
 
-  get op() {
-    return BinOp.toToken(this._op)!;
+  get opToken() {
+    return toToken(this._op)!;
   }
 
   eval() {
@@ -90,53 +93,26 @@ class BinExprNode extends ExprNode {
       payload: {
         left: this.left.serialise(),
         right: this.right.serialise(),
-        op: this.op,
+        op: this.opToken,
       },
     };
   }
 
   static deserialiseNode(object: any) {
     const { left, right, op } = object;
+    const opToken = fromToken(op);
+    if (!opToken) {
+      throw new Error(`Unsupported opera`)
+    }
     return new BinExprNode(
       ExprNode.deserialise(left),
       ExprNode.deserialise(right),
-      BinOp.fromToken(op)!,
+      fromToken(op)!,
     );
   }
 
   public toString = () => 
-    `Expr(${this.left} ${BinOp.toToken(this.opFunc)} ${this.right})`;
+    `Expr(${this.left} ${toToken(this.opFunc)} ${this.right})`;
 
 }
 
-interface BinOp {
-  (left: number, right: number): number;
-}
-
-export namespace BinOp {
-
-  export const Plus: BinOp = (x, y) => x + y;
-  export const Minus: BinOp = (x, y) => x - y;
-  export const Times: BinOp = (x, y) => x * y;
-
-  // TODO: how to handle division by zero?
-  export const Div: BinOp = (x, y) => x / y;
-
-  const tokenToBinOp = new Map<string, BinOp>([
-    ["+", Plus],
-    ["-", Minus],
-    ["*", Times],
-    ["/", Div]
-  ]);
-
-  const binOpToToken = new Map<BinOp, string>([
-    [Plus, "+"],
-    [Minus, "-"],
-    [Times, "*"],
-    [Div, "/"]
-  ]);
-
-  export const fromToken = (token: string) => tokenToBinOp.get(token);
-  export const toToken = (binOp: BinOp) => binOpToToken.get(binOp);
-
-}

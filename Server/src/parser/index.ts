@@ -4,7 +4,8 @@ import { arithmeticParser, AtomContext, BinaryExprContext, UnaryExprContext, Fil
 
 import { AbstractParseTreeVisitor } from 'antlr4ts/tree/AbstractParseTreeVisitor'
 import { arithmeticVisitor } from '../antlr/arithmeticVisitor';
-import { ExprNode, BinOp } from '../models/ExprNode';
+import { ExprNode } from '../models/ExprNode';
+import { fromToken } from '../models/BinOp';
 
 class ExprTreeVisitor extends AbstractParseTreeVisitor<ExprNode> implements arithmeticVisitor<ExprNode> {
 
@@ -18,7 +19,7 @@ class ExprTreeVisitor extends AbstractParseTreeVisitor<ExprNode> implements arit
 
   visitBinaryExpr(ctx: BinaryExprContext) {
     const opToken = ctx.getChild(1).text;
-    const op = BinOp.fromToken(opToken);
+    const op = fromToken(opToken);
     if (!op) {
       throw new Error(`Unsupported operand: ${op}`);
     }
@@ -46,6 +47,7 @@ export function buildExprTree(expr: string) {
   const parser = new arithmeticParser(tokenStream);
 
   // Parse the input
+  // TODO: error handling
   const tree = parser.file();
 
   return new ExprTreeVisitor().visit(tree);
