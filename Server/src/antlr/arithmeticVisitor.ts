@@ -3,10 +3,12 @@
 
 import { ParseTreeVisitor } from "antlr4ts/tree/ParseTreeVisitor";
 
+import { BinaryExprContext } from "./arithmeticParser";
+import { UnaryExprContext } from "./arithmeticParser";
+import { LiteralExprContext } from "./arithmeticParser";
 import { FileContext } from "./arithmeticParser";
 import { ExpressionContext } from "./arithmeticParser";
 import { AtomContext } from "./arithmeticParser";
-import { RelopContext } from "./arithmeticParser";
 
 
 /**
@@ -17,6 +19,30 @@ import { RelopContext } from "./arithmeticParser";
  * operations with no return type.
  */
 export interface arithmeticVisitor<Result> extends ParseTreeVisitor<Result> {
+	/**
+	 * Visit a parse tree produced by the `BinaryExpr`
+	 * labeled alternative in `arithmeticParser.expression`.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	visitBinaryExpr?: (ctx: BinaryExprContext) => Result;
+
+	/**
+	 * Visit a parse tree produced by the `UnaryExpr`
+	 * labeled alternative in `arithmeticParser.expression`.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	visitUnaryExpr?: (ctx: UnaryExprContext) => Result;
+
+	/**
+	 * Visit a parse tree produced by the `LiteralExpr`
+	 * labeled alternative in `arithmeticParser.expression`.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	visitLiteralExpr?: (ctx: LiteralExprContext) => Result;
+
 	/**
 	 * Visit a parse tree produced by `arithmeticParser.file`.
 	 * @param ctx the parse tree
@@ -37,12 +63,5 @@ export interface arithmeticVisitor<Result> extends ParseTreeVisitor<Result> {
 	 * @return the visitor result
 	 */
 	visitAtom?: (ctx: AtomContext) => Result;
-
-	/**
-	 * Visit a parse tree produced by `arithmeticParser.relop`.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	visitRelop?: (ctx: RelopContext) => Result;
 }
 
