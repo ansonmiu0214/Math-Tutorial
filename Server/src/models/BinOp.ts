@@ -13,14 +13,14 @@ const tokenToBinOp = new Map<string, BinOp>([
   ['+', Plus],
   ['-', Minus],
   ['*', Times],
-  ['/', Div]
+  ['/', Div],
 ]);
 
 const binOpToToken = new Map<BinOp, string>([
   [Plus, '+'],
   [Minus, '-'],
   [Times, '*'],
-  [Div, '/']
+  [Div, '/'],
 ]);
 
 export const fromToken = (token: string) => tokenToBinOp.get(token);

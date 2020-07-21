@@ -63,4 +63,4 @@ describe('ExprNode (de)serialisation', () => {
     const tree = buildExprTree('4/2').serialise();
     expect(ExprNode.deserialise(tree).serialise()).toEqual(tree);
   });
-})
+});

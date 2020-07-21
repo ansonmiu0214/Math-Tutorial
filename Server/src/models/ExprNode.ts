@@ -2,6 +2,8 @@ import BinOp, { fromToken, toToken } from './BinOp';
 
 export abstract class ExprNode {
 
+  abstract readonly type: 'value' | 'binexpr';
+
   abstract eval(): number;
 
   abstract serialise(): any;
@@ -31,7 +33,9 @@ export abstract class ExprNode {
 
 }
 
-class ValNode extends ExprNode {
+export class ValNode extends ExprNode {
+
+  readonly type = 'value'; 
   
   readonly value: number;
 
@@ -46,7 +50,7 @@ class ValNode extends ExprNode {
 
   serialise() {
     return {
-      type: "value",
+      type: this.value,
       payload: {
         value: this.value,
       },
@@ -62,7 +66,9 @@ class ValNode extends ExprNode {
   
 }
 
-class BinExprNode extends ExprNode {
+export class BinExprNode extends ExprNode {
+
+  readonly type = 'binexpr'; 
 
   readonly left: ExprNode;
   readonly right: ExprNode;
@@ -89,7 +95,7 @@ class BinExprNode extends ExprNode {
 
   serialise() {
     return {
-      type: "binexpr",
+      type: this.type,
       payload: {
         left: this.left.serialise(),
         right: this.right.serialise(),
