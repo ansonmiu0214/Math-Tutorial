@@ -5,8 +5,8 @@ file : expression EOF;
 expression
    :  expression  (TIMES | DIV)  expression  #BinaryExpr
    |  expression  (PLUS | MINUS) expression  #BinaryExpr
-   |  LPAREN expression RPAREN               #UnaryExpr
-   |  atom                                   #LiteralExpr
+   |  LPAREN expression RPAREN                  #UnaryExpr
+   |  atom                                      #LiteralExpr
    ;
 
 atom

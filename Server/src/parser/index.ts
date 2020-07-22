@@ -4,13 +4,13 @@ import { arithmeticParser, AtomContext, BinaryExprContext, UnaryExprContext, Fil
 
 import { AbstractParseTreeVisitor } from 'antlr4ts/tree/AbstractParseTreeVisitor'
 import { arithmeticVisitor } from '../antlr/arithmeticVisitor';
-import { ExprNode } from '../models/ExprNode';
+import { BinExprNode, ExprNode, ExprNodeUtils, ParenExprNode, ValNode } from '../models/ExprNode';
 import { fromToken } from '../models/BinOp';
 
 class ExprTreeVisitor extends AbstractParseTreeVisitor<ExprNode> implements arithmeticVisitor<ExprNode> {
 
   defaultResult() {
-    return ExprNode.Val(0);
+    return new ValNode(0);
   }
 
   visitFile(ctx: FileContext) {
@@ -18,23 +18,17 @@ class ExprTreeVisitor extends AbstractParseTreeVisitor<ExprNode> implements arit
   }
 
   visitBinaryExpr(ctx: BinaryExprContext) {
-    const opToken = ctx.getChild(1).text;
-    const op = fromToken(opToken);
-    if (!op) {
-      throw new Error(`Unsupported operand: ${op}`);
-    }
-
     const leftChild = ctx.getChild(0);
     const rightChild = ctx.getChild(2);
-    return ExprNode.BinExpr(super.visit(leftChild), super.visit(rightChild), op);
+    return new BinExprNode(super.visit(leftChild), super.visit(rightChild), ctx.getChild(1).text);
   }
 
   visitUnaryExpr(ctx: UnaryExprContext) {
-    return super.visit(ctx.expression());
+    return new ParenExprNode(super.visit(ctx.expression()));
   }
 
   visitAtom(ctx: AtomContext) {
-    return ExprNode.Val(Number.parseInt(ctx.text));
+    return new ValNode(Number.parseInt(ctx.text));
   }
 
 }

@@ -1,99 +1,89 @@
-import BinOp, { fromToken, toToken } from './BinOp';
+import BinOp, { fromToken } from "./BinOp";
 
-export abstract class ExprNode {
+interface Serialisable {
+  serialise(): any;
+}
 
-  abstract readonly type: 'value' | 'binexpr';
-
-  abstract eval(): number;
-
-  abstract serialise(): any;
-
+export abstract class ExprNodeUtils {
+  
   static deserialise(object: any): ExprNode {
     switch (object.type) {
-      case "value":
-        return ValNode.deserialiseNode(object.payload);
-      case "binexpr":
-        return BinExprNode.deserialiseNode(object.payload);
+      case 'val':
+        return ValNode.deserialise(object.payload);
+      case 'binexpr':
+        return BinExprNode.deserialise(object.payload);
+      case 'parenexpr':
+        return ParenExprNode.deserialise(object.payload);
       default:
         throw new Error(`Unrecognised object: ${object}`);
     }
   }
-
-  static Val(value: number) {
-    return new ValNode(value);
-  }
-
-  static BinExpr(left: ExprNode, right: ExprNode, op: BinOp) {
-    return new BinExprNode(left, right, op);
-  }
-
-  static deserialiseNode(object: any): ExprNode {
-    throw new Error("TODO: implement");
-  }
-
-}
-
-export class ValNode extends ExprNode {
-
-  readonly type = 'value'; 
   
-  readonly value: number;
+}
+ 
+export class ValNode {
+  
+  readonly type = 'val';
+
+  private readonly _value: number;
 
   constructor(value: number) {
-    super();
-    this.value = value;
+    this._value = value;
   }
-  
-  eval() {
+
+  get value() { return this._value; }
+
+  eval(): number {
     return this.value;
   }
 
-  serialise() {
+  serialise(): any {
     return {
-      type: this.value,
+      type: this.type,
       payload: {
         value: this.value,
       },
     };
   }
 
-  static deserialiseNode(object: any) {
-    return new ValNode(Number.parseInt(object.value));
+  static deserialise(payload: any) {
+    return new ValNode(payload.value);
   }
 
-  public toString = () =>
-    `Val(${this.value})`;
-  
+  public toString() { return `${this.value}`; }
+
 }
 
-export class BinExprNode extends ExprNode {
+export class BinExprNode {
 
-  readonly type = 'binexpr'; 
+  readonly type = 'binexpr';
 
-  readonly left: ExprNode;
-  readonly right: ExprNode;
-  private readonly _op: BinOp;
+  private readonly _left: ExprNode;
+  private readonly _right: ExprNode;
+  private readonly _opToken: string;
+  private readonly _opFunc: BinOp;
 
-  constructor(left: ExprNode, right: ExprNode, _op: BinOp) {
-    super();
-    this.left = left;
-    this.right = right;
-    this._op = _op;
+  constructor(left: ExprNode, right: ExprNode, opToken: string) {
+    this._left = left;
+    this._right = right;
+    this._opToken = opToken;
+
+    const opFunc = fromToken(opToken);
+    if (!opFunc) {
+      throw new Error(`Unrecognised operand token: "${opToken}"`);
+    }
+
+    this._opFunc = opFunc;
   }
 
-  get opFunc() {
-    return this._op;
-  }
+  get left() { return this._left; }
+  get right() { return this._right; }
+  private get opFunc() { return this._opFunc; }
+  get opToken() { return this._opToken; }
 
-  get opToken() {
-    return toToken(this._op)!;
-  }
+  eval(): number { return this.opFunc(this.left.eval(), this.right.eval()); }
 
-  eval() {
-    return this.opFunc(this.left.eval(), this.right.eval());
-  }
-
-  serialise() {
+  serialise(): any {
     return {
       type: this.type,
       payload: {
@@ -104,21 +94,45 @@ export class BinExprNode extends ExprNode {
     };
   }
 
-  static deserialiseNode(object: any) {
-    const { left, right, op } = object;
-    const opToken = fromToken(op);
-    if (!opToken) {
-      throw new Error(`Unsupported opera`)
-    }
-    return new BinExprNode(
-      ExprNode.deserialise(left),
-      ExprNode.deserialise(right),
-      fromToken(op)!,
-    );
+  static deserialise(payload: any) {
+    const left = ExprNodeUtils.deserialise(payload.left);
+    const right = ExprNodeUtils.deserialise(payload.right);
+    return new BinExprNode(left, right, payload.op);
   }
 
-  public toString = () => 
-    `Expr(${this.left} ${toToken(this.opFunc)} ${this.right})`;
+  public toString() { return `${this.left} ${this.opToken} ${this.right}`; }
 
 }
 
+export class ParenExprNode {
+  
+  readonly type = 'parenexpr';
+
+  private readonly _expr: ExprNode;
+
+  constructor(expr: ExprNode) {
+    this._expr = expr;
+  }
+
+  get expr() { return this._expr; }
+
+  eval(): number { return this.expr.eval(); }
+
+  serialise(): any {
+    return {
+      type: this.type,
+      payload: {
+        expr: this.expr.serialise(),
+      },
+    };
+  }
+
+  static deserialise(payload: any) {
+    return new ParenExprNode(ExprNodeUtils.deserialise(payload.expr));
+  }
+
+  public toString() { return `(${this.expr})`; }
+
+}
+
+export type ExprNode = ValNode | BinExprNode | ParenExprNode;
