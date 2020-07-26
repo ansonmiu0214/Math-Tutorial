@@ -22,7 +22,7 @@ const useStyles = makeStyles({
   },
 });
 
-export default function SnapshotView({ snapshot: snapshot, next: next, recordAttempt, }: Props) {
+export default function SnapshotView({ snapshot, next, recordAttempt, }: Props) {
 
   const classes = useStyles();
 

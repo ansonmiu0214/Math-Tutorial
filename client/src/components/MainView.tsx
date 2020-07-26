@@ -1,11 +1,12 @@
 import React from 'react';
-import { TextField, makeStyles, Container, OutlinedInput, InputAdornment, IconButton, Modal, Paper } from '@material-ui/core';
+import { TextField, makeStyles, Container, InputAdornment, IconButton, Modal, Paper } from '@material-ui/core';
 import { ExprNodeUtils } from '../models/ExprNode';
 import ComputationView from './ComputationView';
 import { KeyboardReturn } from '@material-ui/icons';
 import { StatefulComputation } from '../models/Computation';
 
-const thunk = <A, B>(m: ((_: A) => B), n: A) => () => m(n);
+import { thunk, onEnter } from '../Utils';
+
 
 const useStyles = makeStyles({
   root: {
@@ -47,7 +48,7 @@ export default function MainView() {
 
   const parseExpression = async (exprString: string) => {
     try {
-      const response = await fetch(`/tree/${exprString}`);
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/tree/${exprString}`);
       const jsonData = await response.json();
       const exprNode = ExprNodeUtils.deserialise(jsonData);
       const computation = new StatefulComputation(exprNode);
@@ -85,11 +86,7 @@ export default function MainView() {
             }}
             value={expr}
             onChange={({ target }) => setExpr(target.value)}
-            onKeyPress={(ev) => {
-              if (ev.which === 13) {
-                parseExpression(expr);
-              }
-            }}
+            onKeyPress={onEnter(thunk(parseExpression, expr))}
           />
         </div>
 

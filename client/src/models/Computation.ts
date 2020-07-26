@@ -1,4 +1,4 @@
-import { AbstractExprNode, ExprNode, ValNode, BinExprNode, ParenExprNode } from "./ExprNode";
+import { ExprNode, ValNode, BinExprNode, ParenExprNode } from "./ExprNode";
 
 export enum Status { ACTIVE, INACTIVE, COMPLETE };
 
@@ -35,7 +35,6 @@ export class StatefulComputation {
     this._expr = StatefulComputation.initialiseComputation(expr);
     this._computations = StatefulComputation.getOrderOfComputation(this._expr);
 
-    console.log(this._computations);
     this._computationIdx = 0;
 
     if (this._computationIdx < this._computations.length) {
@@ -43,7 +42,7 @@ export class StatefulComputation {
     }
   }
 
-  get complete() { return this._computationIdx == this._computations.length; }
+  get complete() { return this._computationIdx === this._computations.length; }
 
   get snapshot() { return this._expr; }
 

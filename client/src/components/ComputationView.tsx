@@ -1,7 +1,7 @@
 import React, { Fragment } from 'react';
-import { ComputedExprNode, StatefulComputation, ComputedBinExprNode, Status } from '../models/Computation';
+import { StatefulComputation, } from '../models/Computation';
 import SnapshotView from './SnapshotView';
-import { Grid, Typography } from '@material-ui/core';
+import { Grid, } from '@material-ui/core';
 import { Rating } from '@material-ui/lab';
 
 import { renderToTeX } from '../TeXUtils';
@@ -12,7 +12,7 @@ type Props = {
   computation: StatefulComputation,
 };
 
-export default function ComputationView({ computation: computation }: Props) {
+export default function ComputationView({ computation }: Props) {
 
   const [isCompleted, setCompleted] = React.useState(computation.complete);
   const [completedSteps, setCompletedSteps] = React.useState<string[]>([
