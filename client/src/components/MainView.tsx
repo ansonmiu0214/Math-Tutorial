@@ -47,8 +47,9 @@ export default function MainView() {
   const [computation, setComputation] = React.useState<StatefulComputation>();
 
   const parseExpression = async (exprString: string) => {
+    const expr = encodeURIComponent(exprString);
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/tree/${exprString}`);
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/tree/${expr}`);
       const jsonData = await response.json();
       const exprNode = ExprNodeUtils.deserialise(jsonData);
       const computation = new StatefulComputation(exprNode);
