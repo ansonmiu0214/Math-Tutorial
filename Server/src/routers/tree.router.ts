@@ -12,12 +12,6 @@ treeRouter.get('/:expr', (req, res) => {
   // TODO: error handling
   const tree = buildExprTree(expr);
 
-  const computation = new StatefulComputation(tree);
-  while (!computation.complete) {
-    console.log('%s', computation.snapshot);
-    computation.next();
-  }
-  console.log('%s', computation.snapshot);
   res.json(tree.serialise());
   
 });
