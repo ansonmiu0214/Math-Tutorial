@@ -1,5 +1,21 @@
 import * as functions from 'firebase-functions';
+import express from 'express';
+import cors from 'cors';
 import { buildExprTree } from './parser';
+
+const app = express();
+app.use(cors({
+  origin: true,
+}));
+
+app.get('/:expr', (req, res) => {
+  const expr: string = req.params.expr;
+  
+  // TODO: error handling
+  const tree = buildExprTree(expr);
+
+  res.json(tree.serialise());
+});
 
 // // Start writing Firebase Functions
 // // https://firebase.google.com/docs/functions/typescript
@@ -8,18 +24,4 @@ import { buildExprTree } from './parser';
 //  response.send("Hello from Firebase!");
 // });
 
-exports.tree = functions.https.onRequest((req, res) => {
-  const expr = req.params['0'];
-  if (!expr) {
-    // TODO: error handling
-  }
-
-  if (!expr.startsWith('/')) {
-    // TODO: error handling
-  }
-
-  // TODO: error handling
-  const tree = buildExprTree(expr.substr(1, expr.length - 1));
-
-  res.json(tree.serialise());
-});
+exports.tree = functions.https.onRequest(app);
