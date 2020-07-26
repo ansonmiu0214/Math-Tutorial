@@ -1,7 +1,9 @@
 import BinOp, { fromToken } from "./BinOp";
 
-interface Serialisable {
+export interface AbstractExprNode {
   serialise(): any;
+  eval(): number;
+  type: string;
 }
 
 export abstract class ExprNodeUtils {
@@ -54,16 +56,16 @@ export class ValNode {
 
 }
 
-export class BinExprNode {
+export class BinExprNode<T extends AbstractExprNode> {
 
   readonly type = 'binexpr';
 
-  private readonly _left: ExprNode;
-  private readonly _right: ExprNode;
+  private readonly _left: T;
+  private readonly _right: T;
   private readonly _opToken: string;
   private readonly _opFunc: BinOp;
 
-  constructor(left: ExprNode, right: ExprNode, opToken: string) {
+  constructor(left: T, right: T, opToken: string) {
     this._left = left;
     this._right = right;
     this._opToken = opToken;
@@ -104,13 +106,13 @@ export class BinExprNode {
 
 }
 
-export class ParenExprNode {
+export class ParenExprNode<T extends AbstractExprNode> {
   
   readonly type = 'parenexpr';
 
-  private readonly _expr: ExprNode;
+  private readonly _expr: T;
 
-  constructor(expr: ExprNode) {
+  constructor(expr: T) {
     this._expr = expr;
   }
 
@@ -135,4 +137,4 @@ export class ParenExprNode {
 
 }
 
-export type ExprNode = ValNode | BinExprNode | ParenExprNode;
+export type ExprNode = ValNode | BinExprNode<ExprNode> | ParenExprNode<ExprNode>;

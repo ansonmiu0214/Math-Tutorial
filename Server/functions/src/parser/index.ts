@@ -4,8 +4,7 @@ import { arithmeticParser, AtomContext, BinaryExprContext, UnaryExprContext, Fil
 
 import { AbstractParseTreeVisitor } from 'antlr4ts/tree/AbstractParseTreeVisitor'
 import { arithmeticVisitor } from '../antlr/arithmeticVisitor';
-import { BinExprNode, ExprNode, ExprNodeUtils, ParenExprNode, ValNode } from '../models/ExprNode';
-import { fromToken } from '../models/BinOp';
+import { BinExprNode, ExprNode, ParenExprNode, ValNode } from '../models/ExprNode';
 
 class ExprTreeVisitor extends AbstractParseTreeVisitor<ExprNode> implements arithmeticVisitor<ExprNode> {
 
