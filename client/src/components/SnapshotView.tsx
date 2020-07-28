@@ -30,7 +30,8 @@ export default function SnapshotView({ snapshot, next, recordAttempt, }: Props) 
   const [error, setError] = React.useState(false);
 
   const buildKeyPressListener = (correctAnswer: number) => onEnter(() => {
-    const numericAttempt = Number.parseInt(attempt);
+    const parser = attempt.includes('.') ? Number.parseFloat : Number.parseInt;
+    const numericAttempt = parser(attempt);
     const correct = numericAttempt === correctAnswer;
     recordAttempt(correct);
     setError(!correct);

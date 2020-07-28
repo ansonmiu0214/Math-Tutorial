@@ -43,13 +43,15 @@ export class ValNode {
     return {
       type: this.type,
       payload: {
-        value: this.value,
+        value: `${this.value}`,
       },
     };
   }
 
   static deserialise(payload: any) {
-    return new ValNode(payload.value);
+    const value: string = payload.value;
+    const parser = value.includes('.') ? Number.parseFloat : Number.parseInt;
+    return new ValNode(parser(value));
   }
 
   public toString() { return `${this.value}`; }
