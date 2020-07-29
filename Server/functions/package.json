@@ -12,7 +12,7 @@
     "antlr4ts": "antlr4ts -visitor arithmetic.g4 -o src/antlr"
   },
   "engines": {
-    "node": "8"
+    "node": "12"
   },
   "main": "lib/index.js",
   "dependencies": {

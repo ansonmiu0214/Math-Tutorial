@@ -16,7 +16,10 @@ app.get('/:expr', (req, res) => {
   const tree = buildExprTree(expr);
   const computations = getMiddleSteps(tree);
   
-  res.json(tree.serialise());
+  res.json({
+    expr: tree.serialise(),
+    steps: computations.map(computation => computation.serialise()),
+  });
 });
 
 // // Start writing Firebase Functions

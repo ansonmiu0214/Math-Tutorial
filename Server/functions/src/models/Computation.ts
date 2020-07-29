@@ -1,4 +1,4 @@
-import { ExprLike, ExprNode, ValNode, BinExprNode, ParenExprNode, } from './ExprNode';
+import { ExprLike, ExprNode, ValNode, BinExprNode, ParenExprNode, ExprNodeUtils, } from './ExprNode';
 import { id } from '../utils/Identifiable';
 
 export class ComputationNode implements ExprLike {
@@ -6,9 +6,9 @@ export class ComputationNode implements ExprLike {
   readonly type = 'computation';
   readonly id: number;
 
-  private readonly _expr: BinExprNode<ExprNode>;
+  private readonly _expr: ParenExprNode<ExprNode> | BinExprNode<ExprNode>;
 
-  constructor(expr: BinExprNode<ExprNode>) {
+  constructor(expr: ParenExprNode<ExprNode> | BinExprNode<ExprNode>) {
     this._expr = expr;
     
     this.id = id();
@@ -16,7 +16,13 @@ export class ComputationNode implements ExprLike {
 
   // Properties
   get expr() { return this._expr; }
-  get step() { return this.expr.opToken; }
+  get step() { 
+    if (this.expr.type === 'binexpr') {
+      return this.expr.opToken;
+    } else {
+      return (this.expr.expr as BinExprNode<ExprNode>).opToken;
+    }
+  }
   get answer() { return this.expr.eval(); }
 
   // MARK: implementing ExprLike
@@ -30,6 +36,11 @@ export class ComputationNode implements ExprLike {
         answer: this.answer,
       },
     };
+  }
+
+  static deserialise(payload: any) {
+    const expr = ExprNodeUtils.deserialise(payload.expr) as ParenExprNode<ExprNode> | BinExprNode<ExprNode> ;
+    return new ComputationNode(expr);
   }
   
   public toString() { return `{ ${this.expr} }`; }
@@ -88,7 +99,7 @@ export function getComputation(node: ExprNode, target: number): ComputedExprNode
       }
     case 'parenexpr':
       if (node.id === target) {
-        return new ComputationNode(node.expr as BinExprNode<ExprNode>);
+        return new ComputationNode(node);
       } else {
         return new ParenExprNode(getComputation(node.expr, target));
       }
@@ -117,7 +128,7 @@ export function getMiddleSteps(node: ExprNode) {
 
   while (idOfNextStep !== undefined) {
     computation = getComputation(node, idOfNextStep);
-    
+
     computations.push(computation);
 
     node = completeComputation(computation);
