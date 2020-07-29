@@ -1,12 +1,17 @@
 import React from 'react';
 import { TextField, makeStyles, Container, InputAdornment, IconButton, Modal, Paper } from '@material-ui/core';
 import { ExprNodeUtils } from '../models/ExprNode';
-import ComputationView from './ComputationView';
 import { KeyboardReturn } from '@material-ui/icons';
-import { StatefulComputation } from '../models/Computation';
+import { ExprNode } from '../models/ExprNode';
+import { ComputedExprNode } from '../models/Computation';
 
-import { thunk, onEnter } from '../Utils';
+import { thunk, onEnter } from '../utils';
+import MiddleStepsView from './MiddleStepsView';
 
+export interface ParsedPayload {
+  expr: ExprNode,
+  middleSteps: ComputedExprNode[],
+};
 
 const useStyles = makeStyles({
   root: {
@@ -44,16 +49,19 @@ export default function MainView() {
   const classes = useStyles();
 
   const [expr, setExpr] = React.useState('');
-  const [computation, setComputation] = React.useState<StatefulComputation>();
+  const [parsedPayload, setParsedPayload] = React.useState<ParsedPayload>();
 
   const parseExpression = async (exprString: string) => {
-    const expr = encodeURIComponent(exprString);
+    const exprQuery = encodeURIComponent(exprString);
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/tree/${expr}`);
-      const jsonData = await response.json();
-      const exprNode = ExprNodeUtils.deserialise(jsonData);
-      const computation = new StatefulComputation(exprNode);
-      setComputation(computation);
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/tree/${exprQuery}`);
+      const json  = await response.json();
+      console.log(json);
+      const expr: ExprNode = json.expr;
+      const steps: ComputedExprNode[] = json.steps;
+      const exprNode = ExprNodeUtils.deserialise(expr) as ExprNode;
+      const middleSteps = steps.map(step => ExprNodeUtils.deserialise(step)) as ComputedExprNode[];
+      setParsedPayload({ expr: exprNode, middleSteps });
     } catch (error) {
       console.error(error);
     }
@@ -61,7 +69,7 @@ export default function MainView() {
 
   const reset = () => {
     setExpr('');
-    setComputation(undefined);
+    setParsedPayload(undefined);
   };
 
   return (
@@ -83,7 +91,9 @@ export default function MainView() {
                   </IconButton>
                 </InputAdornment>
               ),
-              style: { display: computation ? 'none' : 'inline-flex', },
+              style: {
+                display: parsedPayload ? 'none' : 'inline-flex',
+              },
             }}
             value={expr}
             onChange={({ target }) => setExpr(target.value)}
@@ -92,14 +102,18 @@ export default function MainView() {
         </div>
 
         <Modal
-          open={computation !== undefined}
+          open={parsedPayload !== undefined}
           onClose={reset}
         >
           <Paper
             className={classes.paper}
             elevation={5}
           >
-            {<ComputationView computation={computation!} />}
+            {parsedPayload !== undefined &&
+              <MiddleStepsView
+                {...parsedPayload}
+              />
+            }
           </Paper>
         </Modal>
       </div>

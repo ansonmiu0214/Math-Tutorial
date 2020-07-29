@@ -1,17 +1,10 @@
 import React from 'react';
-import { ComputedExprNode, Status } from '../models/Computation';
+import { ComputedExprNode, } from '../models/Computation';
 import { TextField, makeStyles } from '@material-ui/core';
 import { tokenToTeX } from '../TeXUtils';
-import { onEnter } from '../Utils';
+import { onEnter } from '../utils';
 
-// const Latex = require('react-latex');
 import Latex from '../latex';
-
-type Props = {
-  snapshot: ComputedExprNode,
-  next: () => void,
-  recordAttempt: (result: boolean) => void,
-};
 
 const useStyles = makeStyles({
   root: {
@@ -22,16 +15,20 @@ const useStyles = makeStyles({
   },
 });
 
-export default function SnapshotView({ snapshot, next, recordAttempt, }: Props) {
+interface Props {
+  snapshot: ComputedExprNode,
+  next: () => void,
+  recordAttempt: (result: boolean) => void,
+};
 
+export default function SnapshotView({ snapshot, next, recordAttempt, }: Props) {
   const classes = useStyles();
 
   const [attempt, setAttempt] = React.useState('');
   const [error, setError] = React.useState(false);
 
   const buildKeyPressListener = (correctAnswer: number) => onEnter(() => {
-    const parser = attempt.includes('.') ? Number.parseFloat : Number.parseInt;
-    const numericAttempt = parser(attempt);
+    const numericAttempt = Number.parseFloat(attempt);
     const correct = numericAttempt === correctAnswer;
     recordAttempt(correct);
     setError(!correct);
@@ -64,24 +61,21 @@ export default function SnapshotView({ snapshot, next, recordAttempt, }: Props) 
       case 'parenexpr': 
         return Parentheses(node.expr);
       case 'binexpr':
-        switch (node.status) {
-          case Status.ACTIVE:
-            return <TextField
-              error={error}
-              className={classes.input}
-              InputProps={{
-                style: { width: `${attempt.length * 1.2 + 2}rem`, },
-              }}
-              variant='outlined'
-              value={attempt}
-              onChange={({ target }) => setAttempt(target.value)}
-              onKeyPress={buildKeyPressListener(node.eval())}
-            />;
-          case Status.INACTIVE:
-            return BinaryExpr(node.left, node.opToken, node.right);
-          case Status.COMPLETE:
-            return Literal(node.eval());
-        }
+        return BinaryExpr(node.left, node.opToken, node.right);
+      case 'computation':
+        return (
+          <TextField
+            error={error}
+            className={classes.input}
+            InputProps={{
+              style: { width: `${attempt.length * 1.2 + 2}rem`, },
+            }}
+            variant='outlined'
+            value={attempt}
+            onChange={({ target }) => setAttempt(target.value)}
+            onKeyPress={buildKeyPressListener(node.answer)}
+          />
+        );
     }
   };
 

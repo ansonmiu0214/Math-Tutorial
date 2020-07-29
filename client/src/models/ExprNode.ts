@@ -1,66 +1,60 @@
-import BinOp, { fromToken } from "./BinOp";
+import BinOp, { fromToken, } from "./BinOp";
+import Identifiable, { id, } from "../utils/Identifiable";
+import Serialisable from "../utils/Serialisable";
+import Evaluatable from "../utils/Evaluatable";
+import { ComputationNode } from "./Computation";
 
-export interface AbstractExprNode {
-  serialise(): any;
-  eval(): number;
-  type: string;
-}
+// ======
+// Models
+// ======
 
-export abstract class ExprNodeUtils {
-  
-  static deserialise(object: any): ExprNode {
-    switch (object.type) {
-      case 'val':
-        return ValNode.deserialise(object.payload);
-      case 'binexpr':
-        return BinExprNode.deserialise(object.payload);
-      case 'parenexpr':
-        return ParenExprNode.deserialise(object.payload);
-      default:
-        throw new Error(`Unrecognised object: ${object}`);
-    }
-  }
-  
-}
- 
-export class ValNode {
-  
+export type ExprLike = Serialisable & Evaluatable & Identifiable;
+
+// ==============
+// Implementation
+// ==============
+
+export class ValNode implements ExprLike {
+
   readonly type = 'val';
+  readonly id: number;
 
   private readonly _value: number;
 
   constructor(value: number) {
     this._value = value;
+
+    this.id = id();
   }
 
+  // Properties
   get value() { return this._value; }
 
-  eval(): number {
-    return this.value;
-  }
+  // MARK: implementing Evaluatable
+  eval() { return this.value; }
 
-  serialise(): any {
+  // MARK: implementing Serialisable
+  serialise() {
     return {
       type: this.type,
       payload: {
-        value: `${this.value}`,
+        value: this.value,
       },
     };
   }
 
   static deserialise(payload: any) {
-    const value: string = payload.value;
-    const parser = value.includes('.') ? Number.parseFloat : Number.parseInt;
-    return new ValNode(parser(value));
+    return new ValNode(Number.parseFloat(payload.value));
   }
 
   public toString() { return `${this.value}`; }
 
 }
 
-export class BinExprNode<T extends AbstractExprNode> {
+export class BinExprNode<T extends ExprLike> implements ExprLike {
 
   readonly type = 'binexpr';
+  readonly id: number;
 
   private readonly _left: T;
   private readonly _right: T;
@@ -72,28 +66,33 @@ export class BinExprNode<T extends AbstractExprNode> {
     this._right = right;
     this._opToken = opToken;
 
-    const opFunc = fromToken(opToken);
-    if (!opFunc) {
-      throw new Error(`Unrecognised operand token: "${opToken}"`);
+    const opFunc = fromToken(this.opToken);
+    if (opFunc === undefined) {
+      throw new Error(`Unrecognised operand: ${this.opToken}`);
     }
-
     this._opFunc = opFunc;
+
+    this.id = id();
   }
 
+  // Properties
   get left() { return this._left; }
   get right() { return this._right; }
-  private get opFunc() { return this._opFunc; }
   get opToken() { return this._opToken; }
 
-  eval(): number { return this.opFunc(this.left.eval(), this.right.eval()); }
+  private get opFunc() { return this._opFunc; }
 
-  serialise(): any {
+  // MARK: implementing Evaluatable
+  eval() { return this.opFunc(this.left.eval(), this.right.eval()); }
+
+  // MARK: implementing Serialisable
+  serialise() {
     return {
       type: this.type,
       payload: {
         left: this.left.serialise(),
         right: this.right.serialise(),
-        op: this.opToken,
+        opToken: this.opToken,
       },
     };
   }
@@ -101,28 +100,35 @@ export class BinExprNode<T extends AbstractExprNode> {
   static deserialise(payload: any) {
     const left = ExprNodeUtils.deserialise(payload.left);
     const right = ExprNodeUtils.deserialise(payload.right);
-    return new BinExprNode(left, right, payload.op);
+    return new BinExprNode(left, right, payload.opToken);
   }
 
-  public toString() { return `${this.left} ${this.opToken} ${this.right}`; }
+  public toString() {
+    return `${this.left} ${this.opToken} ${this.right}`;
+  }
 
 }
 
-export class ParenExprNode<T extends AbstractExprNode> {
-  
+export class ParenExprNode<T extends ExprLike> implements ExprLike {
+
   readonly type = 'parenexpr';
+  readonly id: number;
 
   private readonly _expr: T;
 
   constructor(expr: T) {
     this._expr = expr;
+
+    this.id = id();
   }
 
+  // Properties
   get expr() { return this._expr; }
 
-  eval(): number { return this.expr.eval(); }
+  // MARK: implementing ExprLike
+  eval() { return this.expr.eval(); }
 
-  serialise(): any {
+  serialise() {
     return {
       type: this.type,
       payload: {
@@ -132,11 +138,43 @@ export class ParenExprNode<T extends AbstractExprNode> {
   }
 
   static deserialise(payload: any) {
-    return new ParenExprNode(ExprNodeUtils.deserialise(payload.expr));
+    const expr = ExprNodeUtils.deserialise(payload.expr);
+    return new ParenExprNode(expr);
   }
 
   public toString() { return `(${this.expr})`; }
 
 }
 
-export type ExprNode = ValNode | BinExprNode<ExprNode> | ParenExprNode<ExprNode>;
+// =========
+// Utilities
+// =========
+
+export abstract class ExprNodeUtils {
+
+  static readonly typeToDeserialisers = new Map<string, (payload: any) => ExprLike>([
+    ['val', ValNode.deserialise],
+    ['binexpr', BinExprNode.deserialise],
+    ['parenexpr', ParenExprNode.deserialise],
+    ['computation', ComputationNode.deserialise],
+  ]);
+  
+  static deserialise(data: any): ExprLike {
+    const deserialiser = this.typeToDeserialisers.get(data.type);
+    if (deserialiser === undefined) {
+      throw new Error(`Unrecognised data: ${data}`);
+    }
+    return deserialiser(data.payload);
+  }
+
+}
+
+// ===============
+// Aggregate types
+// ===============
+
+export type ExprNode = 
+  | ValNode
+  | BinExprNode<ExprNode>
+  | ParenExprNode<ExprNode>
+  ;

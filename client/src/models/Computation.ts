@@ -1,93 +1,139 @@
-import { ExprNode, ValNode, BinExprNode, ParenExprNode } from "./ExprNode";
+import { ExprLike, ExprNode, ValNode, BinExprNode, ParenExprNode, ExprNodeUtils, } from './ExprNode';
+import { id } from '../utils/Identifiable';
 
-export enum Status { ACTIVE, INACTIVE, COMPLETE };
+export class ComputationNode implements ExprLike {
 
-export class ComputedBinExprNode extends BinExprNode<ComputedExprNode> {
+  readonly type = 'computation';
+  readonly id: number;
 
-  private _status: Status; 
+  private readonly _expr: ParenExprNode<ExprNode> | BinExprNode<ExprNode>;
 
-  constructor(left: ComputedExprNode, right: ComputedExprNode, opToken: string) {
-    super(left, right, opToken);
-    this._status = Status.INACTIVE;
+  constructor(expr: ParenExprNode<ExprNode> | BinExprNode<ExprNode>) {
+    this._expr = expr;
+    
+    this.id = id();
   }
 
-  get status() { return this._status; }
-  set status(newValue: Status) { this._status = newValue; }
-
-  public toString() {
-    switch (this.status) {
-      case Status.ACTIVE: return `#${super.toString()}#`;
-      case Status.INACTIVE: return super.toString();
-      case Status.COMPLETE: return `${this.eval()}`;
+  // Properties
+  get expr() { return this._expr; }
+  get step() { 
+    if (this.expr.type === 'binexpr') {
+      return this.expr.opToken;
+    } else {
+      return (this.expr.expr as BinExprNode<ExprNode>).opToken;
     }
+  }
+  get answer() { return this.expr.eval(); }
+
+  // MARK: implementing ExprLike
+  eval() { return this.expr.eval(); }
+
+  serialise() {
+    return {
+      type: this.type,
+      payload: {
+        expr: this.expr.serialise(),
+        answer: this.answer,
+      },
+    };
+  }
+
+  static deserialise(payload: any) {
+    const expr = ExprNodeUtils.deserialise(payload.expr) as ParenExprNode<ExprNode> | BinExprNode<ExprNode> ;
+    return new ComputationNode(expr);
+  }
+  
+  public toString() { return `{ ${this.expr} }`; }
+
+}
+
+export type ComputedExprNode = 
+  | ValNode
+  | BinExprNode<ComputedExprNode>
+  | ParenExprNode<ComputedExprNode>
+  | ComputationNode
+  ;
+
+
+function getIdOfFirstParentheses(node: ExprNode): number | undefined {
+  switch (node.type) {
+    case 'val':
+      return undefined;
+    case 'binexpr':
+      return getIdOfFirstParentheses(node.left) ?? getIdOfFirstParentheses(node.right);
+    case 'parenexpr':
+      return getIdOfFirstParentheses(node.expr) ?? node.id;
   }
 }
 
-export type ComputedExprNode = ValNode | ComputedBinExprNode| ParenExprNode<ComputedExprNode>;
+function getIdOfFirstBinExpr(node: ExprNode, targetOperands: Set<string>): number | undefined {
+  switch (node.type) {
+    case 'val':
+      return undefined;
+    case 'binexpr':
+      return getIdOfFirstBinExpr(node.left, targetOperands)
+              ?? getIdOfFirstBinExpr(node.right, targetOperands)
+              ?? (targetOperands.has(node.opToken) ? node.id : undefined);
+    case 'parenexpr':
+      return getIdOfFirstBinExpr(node.expr, targetOperands);
+  }  
+}
 
-export class StatefulComputation {
+export function getIdOfNextStep(node: ExprNode) {
+  return getIdOfFirstParentheses(node)
+          ?? getIdOfFirstBinExpr(node, new Set(['*', '/']))
+          ?? getIdOfFirstBinExpr(node, new Set(['+', '-']));
+}
 
-  private readonly _expr: ComputedExprNode;
-  private readonly _computations: ComputedBinExprNode[];
-  private _computationIdx: number;
+export function getComputation(node: ExprNode, target: number): ComputedExprNode {
+  switch (node.type) {
+    case 'val':
+      return new ValNode(node.value);
+    case 'binexpr':
+      if (node.id === target) {
+        return new ComputationNode(node) 
+      } else {
+        const left = getComputation(node.left, target);
+        const right = getComputation(node.right, target);
+        return new BinExprNode(left, right, node.opToken);
+      }
+    case 'parenexpr':
+      if (node.id === target) {
+        return new ComputationNode(node);
+      } else {
+        return new ParenExprNode(getComputation(node.expr, target));
+      }
+  }
+}
 
-  constructor(expr: ExprNode) {
-    this._expr = StatefulComputation.initialiseComputation(expr);
-    this._computations = StatefulComputation.getOrderOfComputation(this._expr);
+export function completeComputation(node: ComputedExprNode): ExprNode {
+  switch (node.type) {
+    case 'val':
+      return new ValNode(node.value);
+    case 'binexpr':
+      const left = completeComputation(node.left);
+      const right = completeComputation(node.right);
+      return new BinExprNode(left, right, node.opToken);
+    case 'parenexpr':
+      return new ParenExprNode(completeComputation(node.expr));
+    case 'computation':
+      return new ValNode(node.eval());
+  }
+}
 
-    this._computationIdx = 0;
+export function getMiddleSteps(node: ExprNode) {
+  const computations = [];
+  let idOfNextStep = getIdOfNextStep(node);
+  let computation: ComputedExprNode;
 
-    if (this._computationIdx < this._computations.length) {
-      this._computations[this._computationIdx].status = Status.ACTIVE;
-    }
+  while (idOfNextStep !== undefined) {
+    computation = getComputation(node, idOfNextStep);
+
+    computations.push(computation);
+
+    node = completeComputation(computation);
+    idOfNextStep = getIdOfNextStep(node);
   }
 
-  get complete() { return this._computationIdx === this._computations.length; }
-
-  get snapshot() { return this._expr; }
-
-  next() {
-    this._computations[this._computationIdx++].status = Status.COMPLETE;
-    if (this._computationIdx < this._computations.length) {
-      this._computations[this._computationIdx].status = Status.ACTIVE;
-    }
-  }
-
-  private static initialiseComputation(node: ExprNode): ComputedExprNode {
-    switch (node.type) {
-      case 'val':
-        return new ValNode(node.value);
-      case 'parenexpr':
-        return new ParenExprNode(this.initialiseComputation(node.expr));
-      case 'binexpr':
-        const left = this.initialiseComputation(node.left);
-        const right = this.initialiseComputation(node.right);
-        return new ComputedBinExprNode(left, right, node.opToken);
-    }
-  }
-
-  private static getOrderOfComputation(node: ComputedExprNode): ComputedBinExprNode[] {
-    return [
-      ...this.postTraversal(node, new Set(['/', '*'])),
-      ...this.postTraversal(node, new Set(['+', '-'])),
-    ];
-  }
-
-  private static postTraversal(node: ComputedExprNode, operands: Set<string>): ComputedBinExprNode[] {
-    switch (node.type) {
-      case 'val':
-        return [];
-      case 'parenexpr':
-        return this.postTraversal(node.expr, operands);
-      case 'binexpr':
-        const leftOrder = this.postTraversal(node.left, operands);
-        const rightOrder = this.postTraversal(node.right, operands);
-        if (operands.has(node.opToken)) {
-          return [...leftOrder, ...rightOrder, node as ComputedBinExprNode];
-        } else {
-          return [...leftOrder, ...rightOrder];
-        }
-    }
-  }
-
+  return computations;
 }
