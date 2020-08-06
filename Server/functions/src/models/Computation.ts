@@ -54,6 +54,11 @@ export type ComputedExprNode =
   | ComputationNode
   ;
 
+function isAtomicBinExprNode(node: ExprNode) {
+  return node instanceof BinExprNode &&
+          node.left instanceof ValNode &&
+          node.right instanceof ValNode;
+}
 
 function getIdOfFirstParentheses(node: ExprNode): number | undefined {
   switch (node.type) {
@@ -62,7 +67,7 @@ function getIdOfFirstParentheses(node: ExprNode): number | undefined {
     case 'binexpr':
       return getIdOfFirstParentheses(node.left) ?? getIdOfFirstParentheses(node.right);
     case 'parenexpr':
-      return getIdOfFirstParentheses(node.expr) ?? node.id;
+      return isAtomicBinExprNode(node.expr) ? node.id : getIdOfNextStep(node.expr);
   }
 }
 
@@ -121,10 +126,12 @@ export function completeComputation(node: ComputedExprNode): ExprNode {
   }
 }
 
-export function getMiddleSteps(node: ExprNode) {
+export function getMiddleSteps(_node: ExprNode) {
+  let node = _node;
   const computations = [];
   let idOfNextStep = getIdOfNextStep(node);
   let computation: ComputedExprNode;
+
 
   while (idOfNextStep !== undefined) {
     computation = getComputation(node, idOfNextStep);
