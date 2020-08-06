@@ -1,5 +1,5 @@
 import React from 'react';
-import { TextField, makeStyles, Container, InputAdornment, IconButton, Modal, Paper } from '@material-ui/core';
+import { TextField, makeStyles, Container, InputAdornment, IconButton, Modal, Paper, CircularProgress } from '@material-ui/core';
 import { ExprNodeUtils } from '../models/ExprNode';
 import { KeyboardReturn } from '@material-ui/icons';
 import { ExprNode } from '../models/ExprNode';
@@ -49,26 +49,58 @@ export default function MainView() {
   const classes = useStyles();
 
   const [expr, setExpr] = React.useState('');
+  const [errorText, setErrorText] = React.useState<string>();
+  const [loading, setLoading] = React.useState(false);
   const [parsedPayload, setParsedPayload] = React.useState<ParsedPayload>();
+
+  const parseSuccess = async (response: Response) => {
+    try {
+      const { expr, steps } = await response.json();
+      const exprNode = ExprNodeUtils.deserialise(expr) as ExprNode;
+      const middleSteps = steps.map((step: any) => ExprNodeUtils.deserialise(step));
+      setParsedPayload({ expr: exprNode, middleSteps });
+    } catch (errorText) {
+      setErrorText(errorText);
+    }
+  };
+
+  const parseError = async (response: Response) => {
+    try {
+      const { message } = await response.json();
+      setErrorText(`Error: ${message}`);
+    } catch (errorText) {
+      setErrorText(errorText);
+    }
+  };
+
+  const parseInternalError = async (_: Response) => {
+    setErrorText('Internal Server Error');
+  }
+
+  const responseHandlers = new Map([
+    [200, parseSuccess],
+    [400, parseError],
+    [500, parseInternalError],
+  ]);
 
   const parseExpression = async (exprString: string) => {
     const exprQuery = encodeURIComponent(exprString);
+    setLoading(true);
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/tree/${exprQuery}`);
-      const json  = await response.json();
-      const expr: ExprNode = json.expr;
-      const steps: ComputedExprNode[] = json.steps;
-      const exprNode = ExprNodeUtils.deserialise(expr) as ExprNode;
-      const middleSteps = steps.map(step => ExprNodeUtils.deserialise(step)) as ComputedExprNode[];
-      setParsedPayload({ expr: exprNode, middleSteps });
-    } catch (error) {
-      console.error(error);
+      const handler = responseHandlers.get(response.status);
+      await handler?.(response);      
+    } catch (errorText) {
+      setErrorText(errorText);
+    } finally {
+      setLoading(false);
     }
   };
 
   const reset = () => {
     setExpr('');
     setParsedPayload(undefined);
+    setErrorText(undefined);
   };
 
   return (
@@ -82,12 +114,14 @@ export default function MainView() {
               className: classes.input,
               endAdornment: (
                 <InputAdornment position='end'>
-                  <IconButton
-                    edge='end'
-                    onClick={thunk(parseExpression, expr)}
-                  >
-                    <KeyboardReturn />
-                  </IconButton>
+                  {loading ? <CircularProgress /> :
+                    <IconButton
+                      edge='end'
+                      onClick={thunk(parseExpression, expr)}
+                    >
+                      <KeyboardReturn />
+                    </IconButton>
+                  }
                 </InputAdornment>
               ),
               style: {
@@ -97,6 +131,8 @@ export default function MainView() {
             value={expr}
             onChange={({ target }) => setExpr(target.value)}
             onKeyPress={onEnter(thunk(parseExpression, expr))}
+            error={errorText !== undefined}
+            helperText={errorText}
           />
         </div>
 
