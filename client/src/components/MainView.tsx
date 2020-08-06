@@ -56,7 +56,6 @@ export default function MainView() {
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/tree/${exprQuery}`);
       const json  = await response.json();
-      console.log(json);
       const expr: ExprNode = json.expr;
       const steps: ComputedExprNode[] = json.steps;
       const exprNode = ExprNodeUtils.deserialise(expr) as ExprNode;
