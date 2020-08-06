@@ -82,7 +82,13 @@ export class BinExprNode<T extends ExprLike> implements ExprLike {
   private get opFunc() { return this._opFunc; }
 
   // MARK: implementing Evaluatable
-  eval() { return this.opFunc(this.left.eval(), this.right.eval()); }
+  eval() {
+    const result = this.opFunc(this.left.eval(), this.right.eval());
+    if (result  === Infinity || isNaN(result)) {
+      throw new Error(`"${this.toString()}" evaluates to ${result}`);
+    }
+    return result;
+  }
 
   // MARK: implementing Serialisable
   serialise() {

@@ -39,6 +39,12 @@ export function buildExprTree(expr: string) {
   const tokenStream = new CommonTokenStream(lexer);
   const parser = new arithmeticParser(tokenStream);
 
+  parser.addErrorListener({
+    syntaxError: () => {
+      throw new Error('Invalid input')
+    },
+  });
+
   // Parse the input
   // TODO: error handling
   const tree = parser.file();

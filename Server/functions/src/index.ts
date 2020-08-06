@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import { buildExprTree } from './parser';
 import { getMiddleSteps, } from './models/Computation';
+import { ExprNode } from './models/ExprNode';
 
 const app = express();
 app.use(cors({
@@ -13,7 +14,24 @@ app.get('/:expr', (req, res) => {
   const expr: string = req.params.expr;
   
   // TODO: error handling
-  const tree = buildExprTree(expr);
+  let tree: ExprNode;
+  try {
+    tree = buildExprTree(expr);
+  } catch (e) {
+    const error = e as Error;
+    res.status(400).json({ message: error.message });
+    return;
+  }
+
+  // Check for evaluation errors (e.g. DivisionByZero)
+  try {
+    tree.eval();
+  } catch (e) {
+    const error = e as Error;
+    res.status(400).json({ message: error.message });
+    return;
+  }
+
   const computations = getMiddleSteps(tree);
   
   res.json({

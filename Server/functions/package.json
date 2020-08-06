@@ -6,7 +6,7 @@
     "serve": "npm run build && firebase emulators:start --only functions",
     "shell": "npm run build && firebase functions:shell",
     "start": "npm run shell",
-    "test": "jest --coverage",
+    "test": "jest --coverage --silent",
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log",
     "antlr4ts": "antlr4ts -visitor arithmetic.g4 -o src/antlr"
