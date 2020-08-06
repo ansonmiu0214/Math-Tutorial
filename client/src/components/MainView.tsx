@@ -26,7 +26,9 @@ const useStyles = makeStyles({
   },
   textField: {
     width: '80%',
-    backgroundColor: 'rgba(255, 255, 255, 0.7)', 
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    padding: '1em',
+    borderRadius: '4px',
   },
   input: {
     fontSize: '3rem',
