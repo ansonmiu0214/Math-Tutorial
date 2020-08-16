@@ -1,6 +1,6 @@
 import React from 'react';
 import { ParsedPayload } from './MainView';
-import { makeStyles, Grid } from '@material-ui/core';
+import { makeStyles } from '@material-ui/core';
 
 import { renderToTeX } from '../TeXUtils';
 import Latex from '../latex';
@@ -15,6 +15,12 @@ const useStyles = makeStyles({
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'space-evenly',
+    margin: 'auto',
+  },
+  grid: {
+    display: 'grid',
+    gridTemplateColumns: 'auto auto',
+    overflow: 'auto auto',
   },
   equalsSign: {
     textAlign: 'right',
@@ -30,6 +36,8 @@ const useStyles = makeStyles({
 export default function MiddleStepsView({ expr, middleSteps }: ParsedPayload) {
 
   const classes = useStyles();
+
+  const endRef = React.useRef<HTMLDivElement>(null);
 
   const [step, setStep] = React.useState(0);
   const [attempts, setAttempts] = React.useState<boolean[]>([]);
@@ -47,33 +55,30 @@ export default function MiddleStepsView({ expr, middleSteps }: ParsedPayload) {
     }
   };
 
+  React.useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [step]);
+
   return (
     <div className={classes.root}>
-      <Grid container>
+      <div className={classes.grid}>
         {completedSteps.map((completedStep, key) => (
           <React.Fragment key={key}>
-            <Grid item xs={2} lg={4} className={classes.equalsSign}>
-              {key !== 0 && <Latex>$=~$</Latex>}
-            </Grid>
-            <Grid item xs={10} lg={8} className={classes.completedStep}>
-              <Latex>${renderToTeX(completedStep)}$</Latex>
-            </Grid>
+            <div>{key !== 0 && <Latex>$=~$</Latex>}</div>
+            <div><Latex>${renderToTeX(completedStep)}$</Latex></div>
           </React.Fragment>
         ))}
-      </Grid>
-
-      {isCompleted &&
-        <Grid item className={classes.rating}>
+      </div>
+      {isCompleted ?
+        <div className={classes.rating}>
            <Rating
             max={attempts.length}
             value={attempts.filter(attempt => attempt).length}
             size='large'
             readOnly
            />
-        </Grid>
-      }
-
-      {!isCompleted &&
+        </div>
+        :
         <SnapshotView
           recordAttempt={recordAttempt}
           snapshot={middleSteps[step]}

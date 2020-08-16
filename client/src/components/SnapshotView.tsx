@@ -24,6 +24,8 @@ interface Props {
 export default function SnapshotView({ snapshot, next, recordAttempt, }: Props) {
   const classes = useStyles();
 
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
   const [attempt, setAttempt] = React.useState('');
   const [error, setError] = React.useState(false);
 
@@ -35,6 +37,8 @@ export default function SnapshotView({ snapshot, next, recordAttempt, }: Props) 
     if (correct) {
       next();
       setAttempt('');
+      console.log(inputRef.current);
+      inputRef.current?.focus();
     }
   });
 
@@ -53,6 +57,10 @@ export default function SnapshotView({ snapshot, next, recordAttempt, }: Props) 
       {render(right)}
     </>
   );
+
+  React.useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
 
   const render = (node: ComputedExprNode) => {
     switch (node.type) {
@@ -74,6 +82,7 @@ export default function SnapshotView({ snapshot, next, recordAttempt, }: Props) 
             value={attempt}
             onChange={({ target }) => setAttempt(target.value)}
             onKeyPress={buildKeyPressListener(node.answer)}
+            ref={inputRef}
           />
         );
     }
@@ -82,7 +91,7 @@ export default function SnapshotView({ snapshot, next, recordAttempt, }: Props) 
   return (
     <div className={classes.root}>
       <Latex>$=~$</Latex>
-      {render(snapshot)}
+      <span>{render(snapshot)}</span>
     </div>
   );
 }

@@ -98,17 +98,26 @@ export default function MainView() {
       setLoading(false);
     }
   };
+  
+  const inputRef = React.useRef<HTMLInputElement>(null);
 
   const reset = () => {
     setExpr('');
     setParsedPayload(undefined);
     setErrorText(undefined);
+    inputRef.current?.focus();
   };
+
+  React.useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
 
   return (
     <Container>
       <div className={classes.root}> 
-        <div className={classes.child}>
+        <div className={classes.child} style={{
+          display: parsedPayload !== undefined ? 'none' : 'block'
+        }}>
           <TextField
             variant='outlined'
             className={classes.textField}
@@ -126,15 +135,13 @@ export default function MainView() {
                   }
                 </InputAdornment>
               ),
-              style: {
-                display: parsedPayload ? 'none' : 'inline-flex',
-              },
             }}
             value={expr}
             onChange={({ target }) => setExpr(target.value)}
             onKeyPress={onEnter(thunk(parseExpression, expr))}
             error={errorText !== undefined}
             helperText={errorText}
+            ref={inputRef}
           />
         </div>
 
